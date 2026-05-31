@@ -1,6 +1,5 @@
 package DBMS;
 
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -30,6 +29,7 @@ import DBMS.bufferManager.policies.AbstractBufferPolicy;
 import DBMS.bufferManager.policies.FIFO;
 import DBMS.bufferManager.policies.LRU;
 import DBMS.bufferManager.policies.MRU;
+import DBMS.bufferManager.policies.LRUK;
 import DBMS.connectionManager.DBConnection;
 import DBMS.distributed.DistributedTransactionManagerController;
 import DBMS.fileManager.ISchema;
@@ -50,13 +50,8 @@ import DBMS.transactionManager.TransactionRunnable;
 import DBMS.transactionManager.schedules.AbstractScheduler;
 import DBMS.transactionManager.schedules.Protocol2PL;
 
-
 public abstract class Kernel {
 	
-	
-	/**
-	 * Number of pages
-	 */
 	public static int BUFFER_SIZE = 0;
 	public static int BUFFER_SIZE_TEMP = 0;
 	public static int BLOCK_SIZE = 0;
@@ -81,10 +76,8 @@ public abstract class Kernel {
 	public static final String LOG_FOLDER_NAME = "log";
 	public static final String BACKUP_FOLDER_NAME = "backup";
 	
-
 	public static String DATABASE_FILES_FOLDER_NAME = "database";
 	public static String SCHEMAS_FOLDER_NAME = "schemas";
-	
 	
 	public static String LOG_FILE_NAME = "log.b";
 	private static String LOG_FILE = null;
@@ -92,7 +85,6 @@ public abstract class Kernel {
 	private static String CONFIG_FILE = null;
 	public static String BACKUP_FOLDER_PATH = null;
 	public static String CONFIG_FOLDER_PATH = null;
-	
 	
 	private static WriterProcess writerProcess = new WriterProcess();;
 	private static ICatalog catalog = ICatalog.getInstance();
@@ -105,7 +97,6 @@ public abstract class Kernel {
 	private static IRecoveryManager recoveryManager;
 	private static CatalogInitializer catalagInitializer = new CatalogInitializer();
 	private static SealDBPropertiesManipulation propertiesManipulator;
-	
 	
 	public static final String PROPERTIES_PORT = "port";
 	
@@ -124,13 +115,11 @@ public abstract class Kernel {
 	public static final String DATABASE_FINALIZE_STATE_OK = "ok";
 	public static final String DATABASE_FINALIZE_STATE_ERROR = "error";
 
-
 	private static void loadProperties(){
 		CONFIG_FOLDER_PATH = createDirectory( Kernel.DATABASE_FILES_FOLDER + File.separator+CONFIG_FOLDER_NAME) ;
 		CONFIG_FILE = CONFIG_FOLDER_PATH+File.separator+"seal-db-general-configs.properties";
 		Properties properties = new Properties();
 		try {
-			//Kernel.info(Kernel.class,"Config Path: "+path,Level.CONFIG);
 			Kernel.log(Kernel.class,"Config File: "+CONFIG_FILE,Level.CONFIG);
 			File file = new File(CONFIG_FILE);
 			file.createNewFile();
@@ -138,7 +127,6 @@ public abstract class Kernel {
 			propertiesManipulator = new SealDBPropertiesManipulation();
 			propertiesManipulator.file = file;
 			propertiesManipulator.properties = properties;
-			
 			
 			checkProperties(PROPERTIES_LOG_FILE_NAME, LOG_FILE_NAME);
 			checkProperties(PROPERTIES_PORT, "3000");
@@ -150,7 +138,6 @@ public abstract class Kernel {
 			checkProperties(PROPERTIES_CONNECTION_ID, "1");
 			checkProperties(PROPERTIES_DATABASE_FINALIZE_STATE, DATABASE_FINALIZE_STATE_ERROR);
 			
-		
 			if(LOG_FILE_NAME == null || LOG_FILE_NAME.isEmpty())LOG_FILE_NAME = getConfig(PROPERTIES_LOG_FILE_NAME);
 			if(PORT <= 0) PORT = Integer.parseInt(getConfig(PROPERTIES_PORT));
 			if(BLOCK_SIZE <= 0)BLOCK_SIZE = Integer.parseInt(getConfig(PROPERTIES_BLOCK_SIZE));
@@ -170,8 +157,6 @@ public abstract class Kernel {
 		}
 		
 	}
-	
-	
 	
 	private static void createBackupFolder(){
 		BACKUP_FOLDER_PATH = createDirectory( Kernel.SCHEMAS_FOLDER + File.separator+DEFAULT_ROOT_SCHEMA_NAME + File.separator+BACKUP_FOLDER_NAME);
@@ -200,10 +185,6 @@ public abstract class Kernel {
 		recoveryManager.start(LOG_FILE);		
 	}
 	
-	
-	
-	
-
 	private static void checkProperties(String type,String defaultValue) throws IOException{
 		propertiesManipulator.load();
 		String value = propertiesManipulator.properties.getProperty(type);
@@ -212,8 +193,6 @@ public abstract class Kernel {
 			propertiesManipulator.store();
 		}
 	}
-	
-	
 	
 	public static void start(){
 
@@ -231,12 +210,10 @@ public abstract class Kernel {
 			FileHandler fileText =  new FileHandler(SYSTEM_EVENTS_LOG_FOLDER + File.separator + "events_"+dt.format(current)+".log", true);
 			FileHandler fileHTML =  new FileHandler(SYSTEM_EVENTS_LOG_FOLDER + File.separator + "events_"+dt.format(current)+".html", true);
 
-	        // create a TXT formatter
 			SimpleFormatter formatterText = new SimpleFormatter();
 	        fileText.setFormatter(formatterText);
 	        EVENTS_LOGGER.addHandler(fileText);
 
-	        // create an HTML formatter
 	        MyHtmlFormatter formatterHTML = new MyHtmlFormatter();
 	        fileHTML.setFormatter(formatterHTML);
 	        EVENTS_LOGGER.addHandler(fileHTML);
@@ -246,7 +223,6 @@ public abstract class Kernel {
 	        for (Handler handler : root.getHandlers()) {
 	            if (handler instanceof ConsoleHandler) {
 	            	System.out.println(handler.getClass().getName());
-	                // java.util.logging.ConsoleHandler.level = ALL
 	                handler.setLevel(Level.CONFIG);
 	            }
 	        }
@@ -267,7 +243,6 @@ public abstract class Kernel {
 			setBufferPolicy(getBufferManager().getBufferPolicy().getClass());
 		}
 		
-		
 		Kernel.log(Kernel.class,"Using "+getBufferManager().getBufferPolicy().getClass().getSimpleName()+" Buffer Policy",Level.CONFIG);
 		
 		getCatalagInitializer().inicializeCatalog();
@@ -286,7 +261,6 @@ public abstract class Kernel {
 		}
 		
 		getBufferManager().startTempBufferPolicy();
-		
 		
 		if(ENABLE_LOAD_ALL_PAGES_IN_MEMORY_MODE)loadAllPagesInMemory();
 		
@@ -307,9 +281,9 @@ public abstract class Kernel {
 		bufferPolicies.put(LRU.class.getSimpleName(), LRU.class);
 		bufferPolicies.put(MRU.class.getSimpleName(), MRU.class);
 		bufferPolicies.put(FIFO.class.getSimpleName(), FIFO.class);
+		bufferPolicies.put(LRUK.class.getSimpleName(), LRUK.class);
 		return bufferPolicies;
 	}
-	
 	
 	public static String createDirectory(String name){
 		try
@@ -318,7 +292,6 @@ public abstract class Kernel {
 			if (!diretorio.exists()) {  
 			   Files.createDirectory( Paths.get(System.getProperty("user.dir") + File.separator+name));
 			} else {  
-			 //  Kernel.info(Kernel.class,name+" directory found successfully...",Level.CONFIG);
 			}  
         } catch (IOException e)
         {
@@ -326,8 +299,6 @@ public abstract class Kernel {
         }
 		return name;
 	}
-	
-	
 	
 	public static void removeTemporaryFiles() {
 		
@@ -353,9 +324,6 @@ public abstract class Kernel {
 		}
 	}
 	
-	
-	
-
 	static class SealDBPropertiesManipulation{
 		File file;
 		Properties properties;
@@ -421,7 +389,6 @@ public abstract class Kernel {
 		return null;
 	}
 	
-	
 	public static void addJoinAlgotithm(Class<? extends AbstractJoinAlgorithm> abstractJoin){
 		joinAlgorithms.put(abstractJoin.getSimpleName(), abstractJoin);
 	}
@@ -456,7 +423,6 @@ public abstract class Kernel {
 		Collections.reverse(schemas);
 		return schemas;
 	}
-	
 	
 	public static void setBufferPolicy(String name ){
 
@@ -513,22 +479,15 @@ public abstract class Kernel {
 		return writerProcess;
 	}
 
-
 	public static CatalogInitializer getCatalagInitializer() {
 		return catalagInitializer;
 	}
 	
-	
-
 	public static void log(Class<?> c, Object msg, Level level){
-		//level = Level.CONFIG;
-	//	System.out.println("["+new Date().toString()+":"+c.getSimpleName()+"] " + msg.toString() );
 		EVENTS_LOGGER.log(level, ("["+c.getSimpleName()+"] " + msg.toString()));
 	}
 	
 	public static void exception(Class<?> c, Exception e){
-		//e.printStackTrace();
-		//System.out.println("["+new Date().toString()+":"+c.getSimpleName()+"] " + e.getMessage() );
 		EVENTS_LOGGER.severe("["+c.getSimpleName()+"] " +getStackTrace(e));
 	
 	}
@@ -542,7 +501,6 @@ public abstract class Kernel {
 	    return sb.toString();
 	}
 	
-
 	static class MyHtmlFormatter extends Formatter {
 
 	    public String format(LogRecord rec) {
@@ -588,8 +546,6 @@ public abstract class Kernel {
 	        return date_format.format(resultdate);
 	    }
 
-	    // this method is called just after the handler using this
-	    // formatter is created
 	    public String getHead(Handler h) {
 	        return "<!DOCTYPE html>\n<head>\n<style>\n"
 	            + "table { width: 100% }\n"
@@ -608,8 +564,6 @@ public abstract class Kernel {
 	            + "</tr>\n";
 	      }
 
-	    // this method is called just after the handler using this
-	    // formatter is closed
 	    public String getTail(Handler h) {
 	        return "</table>\n</body>\n</html>";
 	    }
@@ -617,10 +571,6 @@ public abstract class Kernel {
 
 	public static int INITIAL_NUMBER_OF_PAGES = 0;
 	public static void loadAllPagesInMemory() {
-//		new Thread(new Runnable() {
-//			@Override
-//			public void run() {
-//				
 				Kernel.log(Kernel.class, "Loading the data into memory...",Level.CONFIG);
 				try {
 					Thread.sleep(2000);
@@ -629,7 +579,6 @@ public abstract class Kernel {
 				}
 				
 				bufferManager.setEnableColdDataLoad(true);
-				
 				
 				for (ISchema schema : Kernel.getCatalog().getShemas()) {
 
@@ -674,10 +623,6 @@ public abstract class Kernel {
 				}
 				Kernel.log(Kernel.class, INITIAL_NUMBER_OF_PAGES+" loaded in-Memory",Level.CONFIG);
 				bufferManager.setEnableColdDataLoad(false);
-			//}
-			
-//		}).start();
-
 
 	}
 
