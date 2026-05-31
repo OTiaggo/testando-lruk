@@ -1,2 +1,4 @@
 /bin/
 /database/
+/database_benchmark_backup*/
+/SQL-Examples/tpch/generated/
